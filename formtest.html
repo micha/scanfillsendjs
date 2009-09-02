@@ -1,0 +1,342 @@
+<html>
+  <head>
+    <title>fill da form</title>
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js"></script>
+    <style type="text/css">
+      * { margin: 0; padding: 0; font-family: sans-serif; }
+      body { font-size: 14px; }
+      div.form {
+        position: fixed;
+        z-index: 5000;
+        bottom: 0px;
+        left: 0px;
+        width: 100%;
+        background: red;
+      }
+      form span.form_message {
+        position: relative;
+        top: 5px;
+        color: white;
+        margin: 5px 40px;
+      }
+      form input, form select {
+        float: right;
+        margin: 5px 10px;
+      }
+      form label {
+        float: right;
+        margin: 5px 0px;
+        color: white;
+      }
+      form input.form_submit {
+        float: right;
+        margin: 5px 40px 5px 0px;
+      }
+      .field, .input {
+        position: absolute;
+        overflow: hidden;
+      }
+      .field {
+        border: 1px dashed red;
+      }
+      .input {
+        border: 1px dashed black;
+      }
+      .selected {
+        border: 1px solid red;
+        cursor: move;
+      }
+      .resize_handle {
+        position: absolute;
+        bottom: 0px;
+        right: 0px;
+        width: 10px;
+        height: 10px;
+        background: red;
+        display: none;
+        cursor: se-resize;
+      }
+      .selected .resize_handle {
+        display: block;
+      }
+      div.properties {
+        position: fixed;
+        top: 0;
+        left: 0;
+        background: white;
+        z-index: 10000;
+        display: none;
+        border: 5px solid yellowgreen;
+        -moz-border-radius: 10px;
+        -webkit-border-radius: 10px;
+      }
+      img {
+        cursor: crosshair;
+      }
+    </style>
+    <script type="text/javascript">
+      $(function() {
+        function doResize(target,x,y,xx,yy) {
+          var t,l,w,h,nt,nl,nw,nh;
+          t=Number($(target).css("top").replace(/px$/,""));
+          l=Number($(target).css("left").replace(/px$/,""));
+          w=Number($(target).width());
+          h=Number($(target).height());
+          if (xx<l || yy<t || (xx-x>0 && xx<l+w) || (yy-y>0 && yy<t+h))
+            return;
+          nw = xx - l;
+          nh = yy - t;
+          $(target)
+            .width((nw+2)+"px")
+            .height((nh+2)+"px")
+            .css("top",nt+"px")
+            .css("left",nl+"px");
+        }
+        function doMove(target,x,y,xx,yy) {
+          var t,l,w,h,nt,nl,nw,nh;
+          t=Number($(target).css("top").replace(/px$/,""));
+          l=Number($(target).css("left").replace(/px$/,""));
+          nt = t + yy - y;
+          nl = l + xx - x;
+          $(target)
+            .css("top",nt+"px")
+            .css("left",nl+"px");
+        }
+        function field() {
+          var f = $("<div/>");
+          f.addClass("field")
+            .data("_field_type","single line")
+            .data("_field_name","field_"+fieldnum++)
+            .css("font-size",
+                $("form select[name='font_size'] :selected").val()+"px")
+            .append("<nobr>Test Test Test</nobr>")
+            .append(
+              $("<div class='resize_handle'/>").mouseenter(function(event) {
+                $(this).toggleClass("resizing",true);
+                return false;
+              }).mouseleave(function(event) {
+                $(this).toggleClass("resizing",false);
+                return false;
+              })
+            )
+            .width("0px").height("0px")
+            .mouseenter(function(event) {
+              if ($(this).hasClass("input")) {
+                $(".input").toggleClass("selected",false);
+                $(this).toggleClass("selected", true);
+              }
+              return false;
+            })
+            .mouseleave(function(event) {
+              if ($(this).hasClass("input")) {
+                $(this).toggleClass("selected", false);
+              }
+              return false;
+            });
+          return f;
+        }
+        function properties() {
+          var wh=Number($(window).height()),ww=Number($(window).width()),
+              dh=Number($("body").height()),dw=Number($("body").width()),
+              ph=Number($(".properties").height()),
+              pw=Number($(".properties").width()),
+              sel=$(".selected"),fs=sel.css("font-size").replace(/px$/,""),
+              ft=sel.data("_field_type"),fn=sel.data("_field_name"),
+              i;
+          $("body").append(
+            $("<div/>").addClass("overlay").css("position","absolute")
+              .css("top","0").css("left","0").css("opacity",0.85)
+              .css("background","black").width(dw+"px").height(dh+"px")
+              .css("z-index",7000)
+          );
+          $(".properties select :selected").removeAttr("selected");
+          $(".properties input[name='name']")
+            .val(fn);
+          $(".properties select[name='type'] option[value='"+ft+"']")
+            .attr("selected","true");
+          $(".properties select[name='font_size'] option[value='"+fs+"']")
+            .attr("selected","true");
+          $(".properties").show()
+            .css("top",wh/2-ph/2).css("left",ww/2-pw/2)
+            .find("input,select").eq(0).focus().select();
+          $(".properties input[value='ok']").unbind()
+            .click(function(event) {
+              var ft=$(".properties select[name='type'] :selected").val(),
+                  fn=$(".properties input[name='name']").val(),
+                  fs=$(".properties select[name='font_size'] :selected").val();
+              sel.data("_field_name",fn);
+              sel.data("_field_type",ft);
+              sel.css("font-size",fs);
+              sel.find("nobr,input,p").replaceWith(
+                ft=="single line" ? $("<nobr>Test Test Test</nobr>")
+                  : ft=="multiline" ? $("<p>Test<br>Test Test</p>")
+                    : $("<input type='checkbox'/>")
+              );
+
+              $(".overlay").remove();
+              $(".properties").hide();
+              return false;
+            });
+          $(".properties input[value='cancel']").unbind()
+            .click(function(event) {
+              $(".overlay").remove();
+              $(".properties").hide();
+              return false;
+            });
+        }
+        var x,y,target,op,fieldnum=1;
+        $("body").mousedown(function(event) {
+          var xx=event.pageX, yy=event.pageY;
+          if ($(".overlay").size()>0)
+            return;
+          if ($(".selected").size()==0) {
+            op = "resize";
+            $(".input").toggleClass("selected",false);
+            target = field().css("top",yy).css("left",xx);
+            $("body").append(target);
+          } else {
+            target = $(".selected");
+            op = $(".resizing").size()==0 ? "move" : "resize";
+          }
+          x = xx;
+          y = yy;
+        }).mousemove(function(event) {
+          var xx=event.pageX, yy=event.pageY;
+          if ($(".overlay").size()>0)
+            return;
+          if (target) {
+            if (op=="resize")
+              doResize(target,x,y,xx,yy);
+            else
+              doMove(target,x,y,xx,yy);
+            x = xx;
+            y = yy;
+          }
+        }).mouseup(function(event) {
+          var xx=event.pageX, yy=event.pageY,
+              w=Number($(target).width()),
+              h=Number($(target).height());
+          if ($(".overlay").size()>0)
+            return;
+          if ($(".selected").size()==0) {
+            if (Math.min(w,h) > 10)
+              target.removeClass("field").addClass("input");
+            $(".field").remove();
+          }
+          target = x = y = undefined;
+        });
+        $(document).keyup(function(event) {
+          if ($(".overlay").size()>0)
+            return;
+          if (event.keyCode==8)
+            $(".selected").remove();
+          return false;
+        }).keydown(function(event) {
+          if ($(".overlay").size()>0)
+            return;
+          return false;
+        }).dblclick(function(event) {
+          if ($(".overlay").size()>0)
+            return;
+          if ($(".selected").size()==0)
+            return false;
+          properties();
+          return false;
+        });
+        var fs=$("body").css("font-size").replace(/px$/,"");
+        $("form").submit(function(event) {
+          alert("okay!");
+          return false;
+        }).find("select")
+          .find("option[value='"+
+              $("body").css("font-size").replace(/px$/,"")+"']")
+            .attr("selected","true")
+      });
+    </script>
+  </head>
+  <body>
+    <form>
+      <img src="http://people.rit.edu/~awd4182/form-fullsize.jpg" alt="fill it" width="960"/>
+      <div class="form">
+        <span class="form_message">Fill da form. Fill it, bitch.</span>
+        <input class="form_submit" type="submit" value="submit"/>
+        <input type="button" value="preview"/>
+        <select name="font_size">
+          <option value="9">9</option>
+          <option value="10">10</option>
+          <option value="11">11</option>
+          <option value="12">12</option>
+          <option value="13">13</option>
+          <option value="14">14</option>
+          <option value="15">15</option>
+          <option value="16">16</option>
+          <option value="17">17</option>
+          <option value="18">18</option>
+          <option value="19">19</option>
+          <option value="20">20</option>
+          <option value="21">21</option>
+          <option value="22">22</option>
+          <option value="23">23</option>
+          <option value="24">24</option>
+        </select>
+        <label>Font Size</label>
+      </div>
+    </form>
+    <div class="properties">
+      <table cellspacing="10px">
+        <tr>
+          <td colspan="2" align="center">
+            <h2>Properties</h2>
+          </td>
+        </tr>
+        <tr>
+          <td>Name</td>
+          <td>
+            <input tabindex="1" type="text" name="name"/>
+          </td>
+        </tr>
+        <tr>
+          <td>Type</td>
+          <td>
+            <select tabindex="2" name="type">
+              <option value="single line">single line</option>
+              <option value="multiline">multiline</option>
+              <option value="checkbox">checkbox</option>
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <td>Font Size</td>
+          <td>
+            <select tabindex="3" name="font_size">
+              <option value="9">9</option>
+              <option value="10">10</option>
+              <option value="11">11</option>
+              <option value="12">12</option>
+              <option value="13">13</option>
+              <option value="14">14</option>
+              <option value="15">15</option>
+              <option value="16">16</option>
+              <option value="17">17</option>
+              <option value="18">18</option>
+              <option value="19">19</option>
+              <option value="20">20</option>
+              <option value="21">21</option>
+              <option value="22">22</option>
+              <option value="23">23</option>
+              <option value="24">24</option>
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <td/>
+          <td>
+            <input tabindex="4" type="button" value="ok"/>
+            <input tabindex="5" type="button" value="cancel"/>
+          </td>
+        </tr>
+      </table>
+    </div>
+  </body>
+</html>
+
