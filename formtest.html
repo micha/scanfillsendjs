@@ -5,13 +5,19 @@
     <style type="text/css">
       * { margin: 0; padding: 0; font-family: sans-serif; }
       body { font-size: 14px; }
+      img {
+        cursor: crosshair;
+      }
       div.form {
         position: fixed;
         z-index: 5000;
         bottom: 0px;
         left: 0px;
-        width: 100%;
+        width: 960px;
         background: red;
+      }
+      form {
+        display: none;
       }
       form span.form_message {
         position: relative;
@@ -70,14 +76,11 @@
         -moz-border-radius: 10px;
         -webkit-border-radius: 10px;
       }
-      img {
-        cursor: crosshair;
-      }
     </style>
     <script type="text/javascript">
       $(function() {
         function doResize(target,x,y,xx,yy) {
-          var t,l,w,h,nt,nl,nw,nh;
+          var t,l,w,h,nt,nl,nw,nh,minh;
           t=Number($(target).css("top").replace(/px$/,""));
           l=Number($(target).css("left").replace(/px$/,""));
           w=Number($(target).width());
@@ -86,6 +89,8 @@
             return;
           nw = xx - l;
           nh = yy - t;
+          if ($(target).find("nobr").size() > 0)
+            nh = Number($(target).find("nobr").height());
           $(target)
             .width((nw+2)+"px")
             .height((nh+2)+"px")
@@ -103,13 +108,13 @@
             .css("left",nl+"px");
         }
         function field() {
-          var f = $("<div/>");
+          var fn="field_"+(fieldnum++),f=$("<div/>"),
+              ft=$("form select[name='type'] :selected").val(),
+              fs=$("form select[name='font_size'] :selected").val();
           f.addClass("field")
-            .data("_field_type","single line")
-            .data("_field_name","field_"+fieldnum++)
-            .css("font-size",
-                $("form select[name='font_size'] :selected").val()+"px")
-            .append("<nobr>Test Test Test</nobr>")
+            .data("_field_type",ft)
+            .data("_field_name",fn)
+            .css("font-size",fs)
             .append(
               $("<div class='resize_handle'/>").mouseenter(function(event) {
                 $(this).toggleClass("resizing",true);
@@ -124,15 +129,24 @@
               if ($(this).hasClass("input")) {
                 $(".input").toggleClass("selected",false);
                 $(this).toggleClass("selected", true);
+                $("form .form_message")
+                  .text("Drag to move or resize, double-click to edit, press delete key to delete.");
               }
               return false;
             })
             .mouseleave(function(event) {
               if ($(this).hasClass("input")) {
                 $(this).toggleClass("selected", false);
+                $("form .form_message")
+                  .text("Drag mouse to create fields.");
               }
               return false;
             });
+          if (ft=="single line")
+            f.append($("<nobr/>").text(fn));
+          else if (ft=="multiline")
+            f.append($("<p/>").text(fn));
+
           return f;
         }
         function properties() {
@@ -145,7 +159,7 @@
               i;
           $("body").append(
             $("<div/>").addClass("overlay").css("position","absolute")
-              .css("top","0").css("left","0").css("opacity",0.85)
+              .css("top","0").css("left","0").css("opacity",0.5)
               .css("background","black").width(dw+"px").height(dh+"px")
               .css("z-index",7000)
           );
@@ -168,11 +182,12 @@
               sel.data("_field_type",ft);
               sel.css("font-size",fs);
               sel.find("nobr,input,p").replaceWith(
-                ft=="single line" ? $("<nobr>Test Test Test</nobr>")
-                  : ft=="multiline" ? $("<p>Test<br>Test Test</p>")
+                ft=="single line" ? $("<nobr>"+fn+"</nobr>")
+                  : ft=="multiline" ? $("<p>"+fn+"</p>")
                     : $("<input type='checkbox'/>")
               );
-
+              if (sel.find("nobr").size()>0)
+                sel.height(Number(sel.find("nobr").height())+"px");
               $(".overlay").remove();
               $(".properties").hide();
               return false;
@@ -183,6 +198,12 @@
               $(".properties").hide();
               return false;
             });
+          $(".properties").unbind("keypress").keypress(function(event) {
+            if (event.keyCode==13) {
+              $(".properties input[value='ok']").click();
+              return false;
+            }
+          });
         }
         var x,y,target,op,fieldnum=1;
         $("body").mousedown(function(event) {
@@ -244,13 +265,15 @@
           return false;
         });
         var fs=$("body").css("font-size").replace(/px$/,"");
-        $("form").submit(function(event) {
+        $("form").show().submit(function(event) {
           alert("okay!");
           return false;
         }).find("select")
           .find("option[value='"+
               $("body").css("font-size").replace(/px$/,"")+"']")
             .attr("selected","true")
+        $("form .form_message")
+          .text("Drag mouse to create fields.");
       });
     </script>
   </head>
@@ -279,7 +302,11 @@
           <option value="23">23</option>
           <option value="24">24</option>
         </select>
-        <label>Font Size</label>
+        <select name="type">
+          <option value="single line">single line</option>
+          <option value="multiline">multiline</option>
+          <option value="checkbox">checkbox</option>
+        </select>
       </div>
     </form>
     <div class="properties">
@@ -331,7 +358,7 @@
         <tr>
           <td/>
           <td>
-            <input tabindex="4" type="button" value="ok"/>
+            <input tabindex="4" type="submit" value="ok"/>
             <input tabindex="5" type="button" value="cancel"/>
           </td>
         </tr>
